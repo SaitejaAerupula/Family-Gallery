@@ -610,8 +610,19 @@ app.post('/api/auth/verify-otp', verifyLimiter, async (req, res) => {
   return res.json({ email });
 });
 
-app.get('/api/auth/session', authRequired, (req, res) => {
-  return res.json({ email: req.user.email });
+app.get('/api/auth/session', (req, res) => {
+  const token = getRequestToken(req);
+
+  if (!token) {
+    return res.json({ email: null });
+  }
+
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);
+    return res.json({ email: payload.email || null });
+  } catch {
+    return res.json({ email: null });
+  }
 });
 
 app.get('/api/folders', authRequired, (req, res) => {

@@ -10,18 +10,28 @@ async function apiFetch(path, options = {}) {
     ...(options.headers || {}),
   };
 
+  const controller = new AbortController();
+  const timeoutMs = 30000;
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
   let response;
   try {
     response = await fetch(`${API_BASE}${path}`, {
       ...options,
       headers,
       credentials: 'include',
+      signal: controller.signal,
     });
-  } catch {
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error?.name === 'AbortError') {
+      throw new Error('Server is taking too long to respond. If hosted on Render, wait 30-60 seconds for cold start and try again.');
+    }
     throw new Error(
       'Cannot connect to API server. Run app from project root and make sure backend is running on http://localhost:5000.'
     );
   }
+  clearTimeout(timeoutId);
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
