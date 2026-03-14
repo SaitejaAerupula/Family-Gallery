@@ -351,7 +351,12 @@ function createEncryptedBackup(reason = 'auto') {
 }
 
 function readJson(filePath) {
-  return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+  if (!fs.existsSync(filePath)) return [];
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+  } catch {
+    return [];
+  }
 }
 
 function writeJson(filePath, data) {
