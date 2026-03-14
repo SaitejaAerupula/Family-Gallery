@@ -3,7 +3,9 @@ import { useEffect, useState } from 'react';
 
 const API_BASE =
   process.env.REACT_APP_API_BASE ||
-  (typeof window !== 'undefined' ? `${window.location.origin}/api` : 'http://localhost:5000/api');
+  (process.env.NODE_ENV === 'development'
+    ? 'http://localhost:5000/api'
+    : `${window.location.origin}/api`);
 
 async function apiFetch(path, options = {}) {
   const headers = {
