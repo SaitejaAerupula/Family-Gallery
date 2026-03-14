@@ -1,7 +1,9 @@
 import './App.css';
 import { useEffect, useState } from 'react';
 
-const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000/api';
+const API_BASE =
+  process.env.REACT_APP_API_BASE ||
+  (typeof window !== 'undefined' ? `${window.location.origin}/api` : 'http://localhost:5000/api');
 
 async function apiFetch(path, options = {}) {
   const headers = {
