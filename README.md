@@ -75,6 +75,38 @@ For production:
 - Keep OS and Node updated.
 - Monitor logs and set backup retention policies.
 
+## Host On Render (Quickest)
+
+Use one Render Web Service so backend serves the frontend build.
+
+1. In Render, create New + Web Service.
+2. Connect repository: `SaitejaAerupula/Family-Gallery`.
+3. Settings:
+- Runtime: `Node`
+- Build Command: `npm install && npm run build`
+- Start Command: `npm run server`
+- Branch: `main`
+4. Add environment variables from `backend/.env`:
+- `PORT=10000`
+- `JWT_SECRET`, `IMAGE_ENCRYPTION_KEY`, `LEGACY_IMAGE_ENCRYPTION_KEYS`
+- `BACKUP_ENCRYPTION_KEY`
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`
+- `CORS_ORIGIN=https://<your-render-domain>`
+- `AUTH_COOKIE_NAME=fg_session`
+- `COOKIE_SAME_SITE=Lax`
+- `FORCE_SECURE_COOKIE=true`
+- `BACKUP_INTERVAL_MINUTES=0` (or your interval)
+- `NODE_ENV=production`
+5. Deploy.
+
+After deploy, your app is available from one URL and APIs are at `/api/*` on the same domain.
+
+Note about storage:
+
+- This app stores encrypted files on local server disk (`backend/data`).
+- On free/ephemeral platforms, files may be lost on restart/redeploy.
+- For reliable hosting, use a persistent disk or migrate media storage to object storage.
+
 ## Backup Restore Test (Recommended)
 
 1. Create a backup:

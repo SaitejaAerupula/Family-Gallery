@@ -15,6 +15,7 @@ const { v4: uuidv4 } = require('uuid');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const app = express();
+app.set('trust proxy', 1);
 
 const PORT = Number(process.env.PORT || 5000);
 const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:3000';
@@ -51,6 +52,8 @@ const decryptionKeys = [encryptionKey, ...legacyEncryptionKeys.map((key) => Buff
 const DATA_DIR = path.join(__dirname, 'data');
 const IMAGES_DIR = path.join(DATA_DIR, 'images');
 const BACKUPS_DIR = path.join(__dirname, 'backups');
+const FRONTEND_BUILD_DIR = path.join(__dirname, '..', 'build');
+const shouldServeFrontend = process.env.SERVE_FRONTEND !== 'false' && fs.existsSync(FRONTEND_BUILD_DIR);
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const OTPS_FILE = path.join(DATA_DIR, 'otps.json');
 const GALLERY_FILE = path.join(DATA_DIR, 'gallery.json');
@@ -235,14 +238,13 @@ function detectBufferType(buffer) {
     return 'image';
   }
 
-    if (hex4 === '89504e47' || ascii.startsWith('GIF8')) {
-      return 'image';
-    }
-
-    if (ascii.startsWith('RIFF') && head.includes('57454250')) {
+  if (hex4 === '89504e47' || ascii.startsWith('GIF8')) {
     return 'image';
   }
-app.set('trust proxy', 1);
+
+  if (ascii.startsWith('RIFF') && head.includes('57454250')) {
+    return 'image';
+  }
 
   if (ascii.startsWith('ID3') || ascii.startsWith('OggS') || (ascii.startsWith('RIFF') && head.includes('57415645'))) {
     return 'audio';
@@ -464,7 +466,6 @@ function decryptBuffer(encrypted, ivHex, tagHex) {
   throw new Error('Unable to decrypt file with configured keys.');
 }
 
-app.use(helmet());
 app.use(
   helmet({
     crossOriginResourcePolicy: false,
@@ -473,6 +474,10 @@ app.use(
 app.use(cors({ origin: CORS_ORIGIN, credentials: true }));
 app.use(express.json({ limit: '1mb' }));
 app.use(morgan('dev'));
+
+if (shouldServeFrontend) {
+  app.use(express.static(FRONTEND_BUILD_DIR));
+}
 
 const otpLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -507,6 +512,10 @@ const upload = multer({
 });
 
 app.get('/', (req, res) => {
+  if (shouldServeFrontend) {
+    return res.sendFile(path.join(FRONTEND_BUILD_DIR, 'index.html'));
+  }
+
   res.status(200).send(
     'Family Gallery API is running. Open http://localhost:3000 for the app UI, or use /api/health for API status.'
   );
@@ -831,6 +840,19 @@ if (AUTO_BACKUP_INTERVAL_MINUTES > 0) {
   }, backupEveryMs);
 }
 
+if (shouldServeFrontend) {
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) {
+      return next();
+    }
+
+    return res.sendFile(path.join(FRONTEND_BUILD_DIR, 'index.html'));
+  });
+}
+
 app.listen(PORT, () => {
   console.log(`Secure gallery API listening on http://localhost:${PORT}`);
+  if (shouldServeFrontend) {
+    console.log(`Serving frontend build from ${FRONTEND_BUILD_DIR}`);
+  }
 });
